@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import logging
 from os import listdir, makedirs, removedirs
 from os.path import isfile, join, splitext, exists, isdir
 import itertools
@@ -9,8 +10,9 @@ from tempfile import NamedTemporaryFile
 import h5py
 import numpy as np
 from skimage.feature import peak_local_max
-from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit
+from sklearn.cross_validation import ShuffleSplit
 from keras.utils import generic_utils
+from scipy.misc import imread, imresize
 
 from localizer.config import data_imsize, filenames_mmapped, filtersize
 
@@ -196,8 +198,6 @@ def resize_data(X, targetsize, interp='bicubic'):
 
     return Xout
 
-from scipy.misc import imread, imresize
-
 def preprocess_image(image_path, filter_imsize):
     assert(filter_imsize[0] == filter_imsize[1])
     ratio = filter_imsize[0] / data_imsize[0]
@@ -241,4 +241,10 @@ def extract_rois(candidates, saliency, image):
         saliencies[idx] = saliency[0][0, 0, r, c]
     return rois, saliencies
 
+def get_default_logger():
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
+    logger.handlers[0].setFormatter(formatter)
+    return logger
 

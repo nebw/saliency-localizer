@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import json
 from os.path import isfile
 
 import numpy as np
@@ -146,6 +147,20 @@ def evaluate_model(ytest, ytest_output, visualize=False, ax=None):
         visualization.plot_recall_precision(recall, precision, average_precision, ax)
 
     return precision, recall, average_precision, thresholds, fpr, tpr, roc_auc
+
+def store_evaluation_results(path, precision, recall, average_precision, thresholds, fpr, tpr, roc_auc):
+    data = {'precision': precision, 'recall': recall, 'average_precision': average_precision,
+            'thresholds': thresholds, 'fpr': fpr, 'tpr': tpr, 'roc_auc': roc_auc}
+    with open('evaluation_results.json', 'w') as outfile:
+        json.dumps(data, outfile, sort_keys=True)
+
+def load_evaluation_results(path):
+    if not isfile(path):
+        raise ValueError('Invalid path')
+
+    with open('evaluation_results.json', 'r') as infile:
+        return json.loads(infile)
+
 def select_threshold(evaluation_results, min_value, optimize='recall'):
     return select_threshold(evaluation_results['precision'], evaluation_results['recall'],
                             evaluation_results['thresholds'], min_value, optimize)

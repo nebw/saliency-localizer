@@ -3,36 +3,36 @@
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
-import theano.tensor as T
-from keras.objectives import epsilon, mse
+from keras.objectives import mse
 from localizer.config import data_imsize
+
 
 def get_filter_network():
     model = Sequential()
 
     model.add(Convolution2D(16, 2, 2,
                             input_shape=(1, data_imsize[0], data_imsize[1]),
-                            border_mode='full'))
+                            border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(16, 2, 2, border_mode='full'))
+    model.add(Convolution2D(16, 2, 2, border_mode='same'))
     model.add(Activation('relu'))
     model.add(Convolution2D(16, 2, 2))
     model.add(Activation('relu'))
     model.add(MaxPooling2D())
     model.add(Dropout(0.2))
 
-    model.add(Convolution2D(32, 2, 2, border_mode='full'))
+    model.add(Convolution2D(32, 2, 2, border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(32, 2, 2, border_mode='full'))
+    model.add(Convolution2D(32, 2, 2, border_mode='same'))
     model.add(Activation('relu'))
     model.add(Convolution2D(32, 2, 2))
     model.add(Activation('relu'))
     model.add(MaxPooling2D())
     model.add(Dropout(0.2))
 
-    model.add(Convolution2D(64, 2, 2, border_mode='full'))
+    model.add(Convolution2D(64, 2, 2, border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 2, 2, border_mode='full'))
+    model.add(Convolution2D(64, 2, 2, border_mode='same'))
     model.add(Activation('relu'))
     model.add(Convolution2D(64, 2, 2))
     model.add(Activation('relu'))

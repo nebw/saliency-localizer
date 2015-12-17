@@ -126,12 +126,18 @@ def f_score(precision, recall, b = 1):
     b2 = np.power(b, 2)
     return (1 + b2) * (precision * recall) / ((b2 * precision) + recall)
 
-def evaluate_model(ytest, ytest_output, min_value=0.985, optimize='recall', visualize=False, ax=None):
-    fpr, tpr, _ = roc_curve(ytest[:, 1], ytest_output[:, 1])
+def evaluate_model(ytest, ytest_output, visualize=False, ax=None):
+    assert(ytest.ndim <= 2)
+    assert(ytest_output.ndim <= 2)
+    if ytest.ndim == 2 and ytest.shape[1] == 2:
+        ytest = ytest[:, 1]
+    if ytest_output.ndim == 2 and ytest_output.shape[1] == 2:
+        ytest_output = ytest_output[:, 1]
+    fpr, tpr, _ = roc_curve(ytest, ytest_output)
     roc_auc    = auc(fpr, tpr)
 
-    precision, recall, thresholds = precision_recall_curve(ytest[:, 1], ytest_output[:, 1])
-    average_precision = average_precision_score(ytest[:, 1], ytest_output[:, 1])
+    precision, recall, thresholds = precision_recall_curve(ytest, ytest_output)
+    average_precision = average_precision_score(ytest, ytest_output)
 
     assert(len(thresholds) >= 2)
 
@@ -139,6 +145,12 @@ def evaluate_model(ytest, ytest_output, min_value=0.985, optimize='recall', visu
         visualization.plot_roc(fpr, tpr, roc_auc, ax)
         visualization.plot_recall_precision(recall, precision, average_precision, ax)
 
+    return precision, recall, average_precision, thresholds, fpr, tpr, roc_auc
+def select_threshold(evaluation_results, min_value, optimize='recall'):
+    return select_threshold(evaluation_results['precision'], evaluation_results['recall'],
+                            evaluation_results['thresholds'], min_value, optimize)
+
+def select_threshold(precision, recall, thresholds, min_value, optimize='recall'):
     assert(optimize in ['precision', 'recall'])
     if optimize == 'precision':
         selected_index = np.nonzero(precision >= min_value)[0][0]

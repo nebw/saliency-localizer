@@ -15,7 +15,11 @@ def plot_sample_images(X, y, num = 24, rowsize = 6, fig=None):
     for idx in range(num):
         ax = plt.subplot(num / rowsize, rowsize, idx + 1)
         ax.imshow(X[data_indices[idx], 0, :, :], cmap=plt.cm.gray)
-        ax.set_title(y[data_indices[idx]][1] == 1)
+        title = y[data_indices[idx]][1] == 1 if y_bool else '{0:.2f}'.format(y[data_indices[idx]][0])
+        if y_true is not None:
+            y_true_title = y_true[data_indices[idx]][1] == 1 if y_bool else '{0:.2f}'.format(y_true[data_indices[idx]][0])
+            title = '{} | {}'.format(title, y_true_title)
+        ax.set_title(title)
         ax.xaxis.set_visible(False)
         ax.yaxis.set_visible(False)
 

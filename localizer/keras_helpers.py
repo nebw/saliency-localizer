@@ -205,3 +205,11 @@ def get_convolution_function(train_model, convolution_model):
     mode = theano.compile.get_default_mode()
     return theano.function([convolution_model.get_input(train=False)],
                            [convolution_model.get_output(train=False)], mode=mode)
+
+def filter_by_threshold(X, Xs, y, threshold, network, datagen):
+    y_out = predict_model(network, Xs, datagen)
+    filter_indices = y_out[:, 1] > threshold
+    print(filter_indices.shape)
+    Xf = X[filter_indices, :]
+    yf = y[filter_indices, :]
+    return Xf, yf

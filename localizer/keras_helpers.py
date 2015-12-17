@@ -110,8 +110,8 @@ def predict_model(model, X, datagen):
         y_batch = model.predict_proba(X_batch, batch_size=batchsize, verbose=0)
         # conversion from singular output to categorial
         if y_batch.shape[1] == 1:
-            y[cnt:min(X.shape[0], cnt+batchsize), 0] = y_batch[:, 0]
-            y[cnt:min(X.shape[0], cnt+batchsize), 1] = 1. - y_batch[:, 0]
+            y[cnt:min(X.shape[0], cnt+batchsize), 0] = 1. - y_batch[:, 0]
+            y[cnt:min(X.shape[0], cnt+batchsize), 1] = y_batch[:, 0]
         else:
             y[cnt:min(X.shape[0], cnt+batchsize), :] = y_batch
         cnt += batchsize

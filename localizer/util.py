@@ -8,8 +8,8 @@ from tempfile import NamedTemporaryFile
 
 import h5py
 import numpy as np
-from scipy.misc import imresize, imread
-from sklearn.cross_validation import StratifiedShuffleSplit
+from skimage.feature import peak_local_max
+from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit
 from keras.utils import generic_utils
 
 from localizer.config import data_imsize, filenames_mmapped, filtersize
@@ -211,4 +211,34 @@ def preprocess_image(image_path, filter_imsize):
     image_filtersize = image_filtersize.astype(np.float32) / 255
 
     return image, image_filtersize, targetsize
+
+def get_candidates(saliency, saliency_threshold):
+    below_thresh = saliency[0][0, 0] < saliency_threshold
+    im = saliency[0][0, 0].copy()
+    im[below_thresh] = 0.
+    dist = filtersize[0] / 2 - 1
+    candidates = peak_local_max(im, min_distance=dist)
+    return candidates
+
+def extract_rois(candidates, saliency, image):
+    rois = np.zeros((len(candidates), 1, data_imsize[0], data_imsize[1]))
+    saliencies = np.zeros((len(candidates), 1))
+    scale = data_imsize[0] / filtersize[0]
+    assert(data_imsize[0] == data_imsize[1])
+    assert(filtersize[0] == filtersize[1])
+    for idx, (r, c) in enumerate(candidates):
+        rc = r + (filtersize[0] - 1) / 2
+        cc = c + (filtersize[1] - 1) / 2
+        assert(int(np.ceil(rc - filtersize[0] / 2)) == r)
+        assert(int(np.ceil(rc + filtersize[0] / 2)) == r+filtersize[0])
+
+        rc_orig = rc * scale
+        cc_orig = cc * scale
+        roi_orig = image[int(np.ceil(rc_orig - data_imsize[0] / 2)):int(np.ceil(rc_orig + data_imsize[0] / 2)),
+                         int(np.ceil(cc_orig - data_imsize[1] / 2)):int(np.ceil(cc_orig + data_imsize[1] / 2))]
+
+        rois[idx] = roi_orig
+        saliencies[idx] = saliency[0][0, 0, r, c]
+    return rois, saliencies
+
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from os import listdir, makedirs, removedirs
-from os.path import isfile, join, splitext, exists
+from os.path import isfile, join, splitext, exists, isdir
 import itertools
 import shutil
 from tempfile import NamedTemporaryFile
@@ -36,7 +36,7 @@ def get_num_samples(files):
 
 def get_shapes(nsamples):
     X_shape = (nsamples, 1, data_imsize[0], data_imsize[1])
-    y_shape = (nsamples, 2)
+    y_shape = (nsamples, 1)
 
     return X_shape, y_shape
 
@@ -59,12 +59,12 @@ def load_data(dname, fname_X, fname_y):
             idx_start = idx
 
             Xbatch = np.zeros((len(data), 1, data_imsize[0], data_imsize[1]))
-            ybatch = np.zeros((len(data), 2))
+            ybatch = np.zeros((len(data), 1))
             for hdf5_idx in range(len(data)):
                 im = data[hdf5_idx][0]
 
                 Xbatch[hdf5_idx, 0, :, :] = im.astype(np.float) / 255.
-                ybatch[hdf5_idx, labels[hdf5_idx]] = 1
+                ybatch[hdf5_idx] = labels[hdf5_idx]
 
                 idx +=1
 
@@ -100,7 +100,7 @@ def split_validation(data_dir, X_test, y_test):
     filenames_val = [join(data_dir, f) for f in (filenames_mmapped['xval'], filenames_mmapped['yval'])]
     filenames_temp = [join(temp_dir, f) for f in (filenames_mmapped['xtest'], filenames_mmapped['ytest'])]
 
-    validation_indices, test_indices = next(StratifiedShuffleSplit(y_test[:, 0], 1, test_size=0.5)._iter_indices())
+    validation_indices, test_indices = next(ShuffleSplit(y_test.shape[0], 1, test_size=0.5)._iter_indices())
 
     X_shape_validation, y_shape_validation = get_shapes(validation_indices.shape[0])
 

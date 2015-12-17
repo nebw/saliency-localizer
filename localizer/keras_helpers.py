@@ -42,7 +42,7 @@ class HistoryCallback(Callback):
         self.epoch_hist.append((logs.get('val_loss'), logs.get('val_acc')))
 
 def fit_model(model, datagen, X_train, y_train, X_test, y_test, weight_path, class_weight,
-              nb_epoch=20, batchsize=4096, categorial=True):
+              nb_epoch=100, batchsize=4096, categorial=True):
     checkpointer = ModelCheckpoint(filepath=weight_path, verbose=0, save_best_only=True)
     stopper = EarlyStopping(monitor='val_loss', patience=3, verbose=1)
     history = HistoryCallback()

@@ -5,13 +5,16 @@ import numpy as np
 
 from localizer import config
 
-def plot_sample_images(X, y, num = 24, rowsize = 6, fig=None):
+def plot_sample_images(X, y, y_true = None, num = 24, rowsize = 6, y_bool=False, fig=None, random=False):
     if fig is None:
         fig = plt.figure(figsize=config.default_figsize)
 
     assert(num % rowsize == 0)
 
-    data_indices = np.random.choice(X.shape[0], num)
+    if random:
+        data_indices = np.random.choice(X.shape[0], num, replace=False)
+    else:
+        data_indices = range(num)
     for idx in range(num):
         ax = plt.subplot(num / rowsize, rowsize, idx + 1)
         ax.imshow(X[data_indices[idx], 0, :, :], cmap=plt.cm.gray)

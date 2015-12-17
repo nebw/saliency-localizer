@@ -14,6 +14,13 @@ from keras.utils import generic_utils
 
 from localizer.config import data_imsize, filenames_mmapped
 
+def get_subdirectories(dir):
+    return [name for name in listdir(dir)
+            if isdir(join(dir, name))]
+
+def get_files(dir):
+    return [name for name in listdir(dir)
+            if isfile(join(dir, name))]
 
 def get_hdf5_files(dname):
     return [join(dname, f) for f in listdir(dname)

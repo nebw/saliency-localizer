@@ -12,7 +12,7 @@ from scipy.misc import imresize, imread
 from sklearn.cross_validation import StratifiedShuffleSplit
 from keras.utils import generic_utils
 
-from localizer.config import data_imsize, filenames_mmapped
+from localizer.config import data_imsize, filenames_mmapped, filtersize
 
 def get_subdirectories(dir):
     return [name for name in listdir(dir)
@@ -207,7 +207,8 @@ def preprocess_image(image_path, filter_imsize):
     targetsize = np.round(np.array(image.shape) * ratio).astype(int)
     image_filtersize = imresize(image, targetsize, interp='bicubic')
 
-    image_filtersize = np.lib.pad(image_filtersize, (int(filter_imsize[0] / 4), int(filter_imsize[1] / 4)), 'edge')
-    targetsize = image_filtersize.shape
+    image = image.astype(np.float32) / 255
+    image_filtersize = image_filtersize.astype(np.float32) / 255
 
     return image, image_filtersize, targetsize
+

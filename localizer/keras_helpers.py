@@ -60,8 +60,6 @@ def fit_model(model, datagen, X_train, y_train, X_test, y_test, weight_path, cla
 
         progbar = generic_utils.Progbar(X_train.shape[0])
         for X_batch, Y_batch in datagen.flow(X_train, y_train, batch_size=batchsize):
-            if not categorial:
-                Y_batch = Y_batch[:, 1].reshape((Y_batch.shape[0], 1))
             loss, acc = model.train_on_batch(X_batch, Y_batch, accuracy=True, class_weight=class_weight)
 
             logs = {'loss': loss, 'acc': acc}
@@ -75,8 +73,6 @@ def fit_model(model, datagen, X_train, y_train, X_test, y_test, weight_path, cla
         mean_acc  = 0.
         progbar = generic_utils.Progbar(X_test.shape[0])
         for X_batch, Y_batch in datagen.flow(X_test, y_test, batch_size=batchsize):
-            if not categorial:
-                Y_batch = Y_batch[:, 1].reshape((Y_batch.shape[0], 1))
             loss, acc = model.test_on_batch(X_batch, Y_batch, accuracy=True)
 
             num_test += 1

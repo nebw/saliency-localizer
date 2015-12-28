@@ -206,10 +206,13 @@ def get_convolution_function(train_model, convolution_model):
     return theano.function([convolution_model.get_input(train=False)],
                            [convolution_model.get_output(train=False)], mode=mode)
 
-def filter_by_threshold(X, Xs, y, threshold, network, datagen):
+def filter_by_threshold(X, Xs, y, threshold, network, datagen, prop_below=1.):
     y_out = predict_model(network, Xs, datagen)
-    filter_indices = y_out[:, 1] > threshold
-    print(filter_indices.shape)
+    above_indices = np.nonzero(y_out[:, 1] > threshold)
+    below_indices = np.random.choice(np.nonzero(y_out[:, 1] <= threshold),
+                                     prop_below * above_indices.shape[0],
+                                     replace=False)
+    filter_indices = np.concatenate((above_indices, below_indices))
     Xf = X[filter_indices, :]
     yf = y[filter_indices, :]
     return Xf, yf

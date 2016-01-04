@@ -5,7 +5,7 @@ setup(name='saliceny-localizer',
       description='',
       install_requires=[
             "numpy>=1.9",
-            "keras",
+            "keras>=0.3.0",
             "scikit-image>=0.11.3",
             "theano",
             "seaborn",

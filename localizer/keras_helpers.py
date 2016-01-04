@@ -55,37 +55,60 @@ def fit_model(model, datagen, X_train, y_train, X_test, y_test, weight_path, cla
         callback.on_train_begin()
 
     model.stop_training = False
+    show_accuracy = y_train.shape[1] != 1
+
+    def unpack_result(res, show_accuracy, stage='train'):
+        if show_accuracy:
+            loss, acc = res
+        else:
+            loss = res[0]
+            acc = None
+
+        progbarvals = [("{} loss".format(stage), loss)]
+        if acc is not None:
+            progbarvals.append(("{} acc".format(stage), acc))
+
+        return loss, acc, progbarvals
 
     for e in range(nb_epoch):
         print('Epoch', e)
 
         progbar = generic_utils.Progbar(X_train.shape[0])
-        for X_batch, Y_batch in datagen.flow(X_train, y_train, batch_size=batchsize):
-            loss, acc = model.train_on_batch(X_batch, Y_batch, accuracy=True, class_weight=class_weight)
+        for X_batch, Y_batch in datagen.flow(X_train, y_train, batch_size=batchsize, shuffle=True):
+            loss, acc, pbval = unpack_result(model.train_on_batch(X_batch, Y_batch,
+                                                                  accuracy=show_accuracy,
+                                                                  class_weight=class_weight),
+                                             show_accuracy)
 
             logs = {'loss': loss, 'acc': acc}
             for callback in callbacks:
                  callback.on_batch_end(None, logs)
 
-            progbar.add(X_batch.shape[0], values=[("train loss", loss), ("train acc", acc)])
+            progbar.add(X_batch.shape[0], values=pbval)
 
         num_test  = 0
         mean_loss = 0.
         mean_acc  = 0.
         progbar = generic_utils.Progbar(X_test.shape[0])
-        for X_batch, Y_batch in datagen.flow(X_test, y_test, batch_size=batchsize):
-            loss, acc = model.test_on_batch(X_batch, Y_batch, accuracy=True)
+        for X_batch, Y_batch in datagen.flow(X_test, y_test, batch_size=batchsize, shuffle=True):
+            loss, acc, pbval = unpack_result(model.test_on_batch(X_batch, Y_batch,
+                                                                 accuracy=show_accuracy),
+                                             show_accuracy, stage='test')
 
             num_test += 1
             mean_loss += loss
-            mean_acc += acc
+            if show_accuracy:
+                mean_acc += acc
 
-            progbar.add(X_batch.shape[0], values=[("test loss", loss), ("test acc", acc)])
+            progbar.add(X_batch.shape[0], values=pbval)
 
         mean_loss /= num_test
-        mean_acc /= num_test
+        if show_accuracy:
+            mean_acc /= num_test
 
-        logs = {'val_loss': mean_loss, 'val_acc': mean_acc}
+        logs = {'val_loss': mean_loss}
+        if acc is not None:
+            logs['val_acc'] = mean_acc
         for callback in callbacks:
             callback.on_epoch_end(e, logs)
 

@@ -7,7 +7,7 @@ from keras.objectives import mse
 from localizer.config import data_imsize
 
 
-def get_filter_network():
+def get_filter_network(compile=True):
     model = Sequential()
 
     model.add(Convolution2D(16, 2, 2,
@@ -51,13 +51,13 @@ def get_filter_network():
 
     model.add(Dense(1))
     model.add(Activation('sigmoid'))
-
-    model.compile(loss='mse', optimizer="adam")
+    if compile:
+        model.compile(loss='mse', optimizer="adam")
 
     return model
 
 
-def get_saliency_network(train=True):
+def get_saliency_network(train=True, compile=True):
     model = Sequential()
     model.add(Convolution2D(32, 3, 3, input_shape=(1, None, None),
                             activation='relu', border_mode='same'))
@@ -69,6 +69,7 @@ def get_saliency_network(train=True):
     if train:
         model.add(Flatten())
 
-    model.compile('adam', mse)
+    if compile:
+        model.compile('adam', mse)
 
     return model

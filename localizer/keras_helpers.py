@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
+import contextlib
 import json
+import os
 from os.path import isfile
 
 import numpy as np
@@ -42,6 +44,9 @@ class HistoryCallback(Callback):
     def on_epoch_end(self, batch, logs={}):
         self.epoch_hist.append((logs.get('val_loss'), logs.get('val_acc')))
 
+from tempfile import mkdtemp
+import os.path as path
+
 def fit_model(model, datagen, X_train, y_train, X_test, y_test, weight_path, class_weight,
               nb_epoch=100, batchsize=4096, categorial=True):
     checkpointer = ModelCheckpoint(filepath=weight_path, verbose=0, save_best_only=True)
@@ -70,52 +75,71 @@ def fit_model(model, datagen, X_train, y_train, X_test, y_test, weight_path, cla
 
         return loss, acc, progbarvals
 
+    @contextlib.contextmanager
+    def shuffled_mmap(data, fname, indices):
+        try:
+            filename = path.join(mkdtemp(), fname)
+            fp = np.memmap(filename, dtype=data.dtype, mode='w+', shape=data.shape)
+            np.copyto(fp, data[indices])
+            yield fp
+        finally:
+            del(fp)
+            os.remove(filename)
+
     for e in range(nb_epoch):
         print('Epoch', e)
 
-        progbar = generic_utils.Progbar(X_train.shape[0])
-        for X_batch, Y_batch in datagen.flow(X_train, y_train, batch_size=batchsize, shuffle=True):
-            loss, acc, pbval = unpack_result(model.train_on_batch(X_batch, Y_batch,
-                                                                  accuracy=show_accuracy,
-                                                                  class_weight=class_weight),
-                                             show_accuracy)
+        indices_tr = np.random.permutation(X_train.shape[0])
+        indices_te = np.random.permutation(X_test.shape[0])
 
-            logs = {'loss': loss, 'acc': acc}
-            for callback in callbacks:
-                 callback.on_batch_end(None, logs)
+        with shuffled_mmap(X_train, 'Xtr', indices_tr) as Xtr, \
+             shuffled_mmap(y_train, 'ytr', indices_tr) as ytr, \
+             shuffled_mmap(X_test, 'Xte', indices_te) as Xte, \
+             shuffled_mmap(y_test, 'yte', indices_te) as yte:
 
-            progbar.add(X_batch.shape[0], values=pbval)
+            progbar = generic_utils.Progbar(X_train.shape[0])
+            for X_batch, Y_batch in datagen.flow(Xtr, ytr, batch_size=batchsize, shuffle=False):
+                loss, acc, pbval = unpack_result(model.train_on_batch(X_batch, Y_batch,
+                                                                    accuracy=show_accuracy,
+                                                                    class_weight=class_weight),
+                                                show_accuracy)
 
-        num_test  = 0
-        mean_loss = 0.
-        mean_acc  = 0.
-        progbar = generic_utils.Progbar(X_test.shape[0])
-        for X_batch, Y_batch in datagen.flow(X_test, y_test, batch_size=batchsize, shuffle=True):
-            loss, acc, pbval = unpack_result(model.test_on_batch(X_batch, Y_batch,
-                                                                 accuracy=show_accuracy),
-                                             show_accuracy, stage='test')
+                logs = {'loss': loss, 'acc': acc}
+                for callback in callbacks:
+                    callback.on_batch_end(None, logs)
 
-            num_test += 1
-            mean_loss += loss
+                progbar.add(X_batch.shape[0], values=pbval)
+
+            num_test  = 0
+            mean_loss = 0.
+            mean_acc  = 0.
+            progbar = generic_utils.Progbar(X_test.shape[0])
+            for X_batch, Y_batch in datagen.flow(Xte, yte, batch_size=batchsize, shuffle=False):
+                loss, acc, pbval = unpack_result(model.test_on_batch(X_batch, Y_batch,
+                                                                    accuracy=show_accuracy),
+                                                show_accuracy, stage='test')
+
+                num_test += 1
+                mean_loss += loss
+                if show_accuracy:
+                    mean_acc += acc
+
+                progbar.add(X_batch.shape[0], values=pbval)
+
+            mean_loss /= num_test
             if show_accuracy:
-                mean_acc += acc
+                mean_acc /= num_test
 
-            progbar.add(X_batch.shape[0], values=pbval)
+            logs = {'val_loss': mean_loss}
+            if acc is not None:
+                logs['val_acc'] = mean_acc
+            for callback in callbacks:
+                callback.on_epoch_end(e, logs)
 
-        mean_loss /= num_test
-        if show_accuracy:
-            mean_acc /= num_test
+            if model.stop_training:
+                break
 
-        logs = {'val_loss': mean_loss}
-        if acc is not None:
-            logs['val_acc'] = mean_acc
-        for callback in callbacks:
-            callback.on_epoch_end(e, logs)
-
-        if model.stop_training:
-            break
-
-        print()
+            print()
 
     model.load_weights(weight_path)
 
@@ -231,11 +255,11 @@ def get_convolution_function(train_model, convolution_model):
 
 def filter_by_threshold(X, Xs, y, threshold, network, datagen, prop_below=1.):
     y_out = predict_model(network, Xs, datagen)
-    above_indices = np.nonzero(y_out[:, 1] > threshold)
-    below_indices = np.random.choice(np.nonzero(y_out[:, 1] <= threshold),
+    above_indices = np.nonzero(y_out[:, 1] > threshold)[0]
+    below_indices = np.random.choice((np.nonzero(y_out[:, 1] <= threshold))[0],
                                      prop_below * above_indices.shape[0],
                                      replace=False)
     filter_indices = np.concatenate((above_indices, below_indices))
-    Xf = X[filter_indices, :]
-    yf = y[filter_indices, :]
+    Xf = np.copy(X[filter_indices, :])
+    yf = np.copy(y[filter_indices, :])
     return Xf, yf

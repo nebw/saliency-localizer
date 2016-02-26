@@ -9,7 +9,7 @@ from localizer.config import data_imsize, filtersize
 from keras.optimizers import SGD
 
 
-def get_filter_network():
+def get_filter_network(compile=True):
     model = Sequential()
 
     model.add(Convolution2D(8, 2, 2,
@@ -52,12 +52,13 @@ def get_filter_network():
     model.add(Activation('softmax'))
     model.add(BatchNormalization())
 
-    model.compile(loss='categorial_crossentropy', optimizer="adam")
+    if compile:
+        model.compile(loss='categorial_crossentropy', optimizer="adam")
 
     return model
 
 
-def get_saliency_network(train=True, learning_rate=0.01, shape=None):
+def get_saliency_network(train=True, learning_rate=0.1, shape=None, compile=True):
     if train:
         input_shape = (1, filtersize[0], filtersize[1])
     else:
@@ -81,6 +82,7 @@ def get_saliency_network(train=True, learning_rate=0.01, shape=None):
         model.add(UpSampling2D())
         model.add(UpSampling2D())
 
-    model.compile(SGD(lr=learning_rate, momentum=0.9, nesterov=True), mse)
+    if compile:
+        model.compile(SGD(lr=learning_rate, momentum=0.9, nesterov=True), mse)
 
     return model

@@ -212,11 +212,12 @@ def preprocess_image(image_path, filter_imsize):
 
     return image, image_filtersize, targetsize
 
-def get_candidates(saliency, saliency_threshold):
+def get_candidates(saliency, saliency_threshold, dist=None):
+    if dist is None:
+        dist = filtersize[0] / 2 - 1
     below_thresh = saliency[0][0, 0] < saliency_threshold
     im = saliency[0][0, 0].copy()
     im[below_thresh] = 0.
-    dist = filtersize[0] / 2 - 1
     candidates = peak_local_max(im, min_distance=dist)
     return candidates
 

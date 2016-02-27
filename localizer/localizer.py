@@ -56,6 +56,7 @@ class Localizer:
         saliency[0][0, 0] = gaussian_filter(saliency[0][0, 0], sigma=2.)
 
         candidates = util.get_candidates(saliency, saliency_threshold)
-        rois, saliencies = util.extract_rois(candidates, saliency, image)
+        rois = util.extract_rois(candidates, image)
+        saliencies = util.extract_saliencies(candidates, saliency)
 
         return saliencies, candidates, rois

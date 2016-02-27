@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from localizer import config
+from localizer.util import scale_candidates
+
 
 def plot_sample_images(X, y, y_true = None, num = 24, rowsize = 6, y_bool=False, fig=None, random=False):
     if fig is None:
@@ -80,21 +82,9 @@ def get_roi_overlay(coordinates, image):
     pltim[:, :, 0] = image
     pltim[:, :, 1] = image
     pltim[:, :, 2] = image
-    rois = np.zeros((len(coordinates), 1, config.data_imsize[0], config.data_imsize[1]))
-    saliencies = np.zeros((len(coordinates), 1))
-    scale = config.data_imsize[0] / config.filtersize[0]
-    assert(config.data_imsize[0] == config.data_imsize[1])
-    assert(config.filtersize[0] == config.filtersize[1])
-    for idx, (r, c) in enumerate(coordinates):
-        rc = r + (config.filtersize[0] - 1) / 2
-        cc = c + (config.filtersize[1] - 1) / 2
-        assert(int(np.ceil(rc - config.filtersize[0] / 2)) == r)
-        assert(int(np.ceil(rc + config.filtersize[0] / 2)) == r + config.filtersize[0])
-
-        rc_orig = rc * scale
-        cc_orig = cc * scale
-        pltim[int(np.ceil(rc_orig - config.data_imsize[0] / 2)):int(np.ceil(rc_orig + config.data_imsize[0] / 2)),
-              int(np.ceil(cc_orig - config.data_imsize[1] / 2)):int(np.ceil(cc_orig + config.data_imsize[1] / 2)),
+    for idx, (r, c) in enumerate(scale_candidates(coordinates)):
+        pltim[int(np.ceil(r - config.data_imsize[0] / 2)):int(np.ceil(r + config.data_imsize[0] / 2)),
+              int(np.ceil(c - config.data_imsize[1] / 2)):int(np.ceil(c + config.data_imsize[1] / 2)),
               0] = 1.
 
     return pltim

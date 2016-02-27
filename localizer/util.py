@@ -14,7 +14,8 @@ from sklearn.cross_validation import ShuffleSplit
 from keras.utils import generic_utils
 from scipy.misc import imread, imresize
 
-from localizer.config import data_imsize, filenames_mmapped, filtersize
+from localizer.config import data_imsize, filenames_mmapped, filtersize, \
+    scale_factor
 
 def get_subdirectories(dir):
     return [name for name in listdir(dir)
@@ -212,6 +213,7 @@ def preprocess_image(image_path, filter_imsize):
 
     return image, image_filtersize, targetsize
 
+
 def get_candidates(saliency, saliency_threshold, dist=None):
     if dist is None:
         dist = filtersize[0] / 2 - 1
@@ -221,26 +223,37 @@ def get_candidates(saliency, saliency_threshold, dist=None):
     candidates = peak_local_max(im, min_distance=dist)
     return candidates
 
-def extract_rois(candidates, saliency, image):
-    rois = np.zeros((len(candidates), 1, data_imsize[0], data_imsize[1]))
-    saliencies = np.zeros((len(candidates), 1))
-    scale = data_imsize[0] / filtersize[0]
-    assert(data_imsize[0] == data_imsize[1])
-    assert(filtersize[0] == filtersize[1])
-    for idx, (r, c) in enumerate(candidates):
-        rc = r + (filtersize[0] - 1) / 2
-        cc = c + (filtersize[1] - 1) / 2
-        assert(int(np.ceil(rc - filtersize[0] / 2)) == r)
-        assert(int(np.ceil(rc + filtersize[0] / 2)) == r+filtersize[0])
 
-        rc_orig = rc * scale
-        cc_orig = cc * scale
-        roi_orig = image[int(np.ceil(rc_orig - data_imsize[0] / 2)):int(np.ceil(rc_orig + data_imsize[0] / 2)),
-                         int(np.ceil(cc_orig - data_imsize[1] / 2)):int(np.ceil(cc_orig + data_imsize[1] / 2))]
+def scale_candidates(candidates, border=0):
+    candidates_arr = np.asarray(candidates)
+    r = candidates_arr[:, 0]
+    c = candidates_arr[:, 1]
+    rc = r + (filtersize[0] - 1) / 2
+    cc = c + (filtersize[1] - 1) / 2
+    assert (np.ceil(rc - filtersize[0] / 2) == r).all()
+    assert (np.ceil(rc + filtersize[0] / 2) == r+filtersize[0]).all()
+    scaled = scale_factor * np.concatenate(
+        [rc[:, np.newaxis], cc[:, np.newaxis]], axis=1)
+    return scaled + border
 
+
+def extract_rois(candidates, image, roi_shape=None, border=0):
+    if roi_shape is None:
+        roi_shape = data_imsize
+    rois = np.zeros((len(candidates), 1, roi_shape[0], roi_shape[1]))
+    for idx, (r_orig, c_orig) in enumerate(scale_candidates(candidates, border)):
+        roi_orig = image[int(np.ceil(r_orig - roi_shape[0] / 2)):int(np.ceil(r_orig + roi_shape[0] / 2)),
+                         int(np.ceil(c_orig - roi_shape[1] / 2)):int(np.ceil(c_orig + roi_shape[1] / 2))]
         rois[idx] = roi_orig
+    return rois
+
+
+def extract_saliencies(candidates, saliency):
+    saliencies = np.zeros((len(candidates), 1))
+    for idx, (r, c) in enumerate(candidates):
         saliencies[idx] = saliency[0][0, 0, r, c]
-    return rois, saliencies
+    return saliencies
+
 
 def get_default_logger():
     logger = logging.getLogger()
@@ -248,4 +261,3 @@ def get_default_logger():
     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
     logger.handlers[0].setFormatter(formatter)
     return logger
-

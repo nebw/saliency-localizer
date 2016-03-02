@@ -243,7 +243,8 @@ def copy_network_weights(train, deploy):
     for tr_layer, dp_layer in zip(train.layers, deploy.layers):
         if type(tr_layer) == Flatten:
             continue
-        for tp, dp in zip(tr_layer.params, dp_layer.params):
+        for tp, dp in zip(tr_layer.trainable_weights,
+                          dp_layer.trainable_weights):
             dp.set_value(tp.get_value())
 
 def get_convolution_function(train_model, convolution_model):
@@ -251,7 +252,8 @@ def get_convolution_function(train_model, convolution_model):
 
     mode = theano.compile.get_default_mode()
     return theano.function([convolution_model.get_input(train=False)],
-                           [convolution_model.get_output(train=False)], mode=mode)
+                           convolution_model.get_output(train=False),
+                           mode=mode)
 
 def filter_by_threshold(X, Xs, y, threshold, network, datagen, prop_below=1.):
     y_out = predict_model(network, Xs, datagen)

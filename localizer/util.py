@@ -217,8 +217,8 @@ def preprocess_image(image_path, filter_imsize):
 def get_candidates(saliency, saliency_threshold, dist=None):
     if dist is None:
         dist = filtersize[0] / 2 - 1
-    below_thresh = saliency[0][0, 0] < saliency_threshold
-    im = saliency[0][0, 0].copy()
+    below_thresh = saliency < saliency_threshold
+    im = saliency.copy()
     im[below_thresh] = 0.
     candidates = peak_local_max(im, min_distance=dist)
     return candidates
@@ -237,21 +237,31 @@ def scale_candidates(candidates, border=0):
     return scaled + border
 
 
-def extract_rois(candidates, image, roi_shape=None, border=0):
+def to_image_coordinates(coords):
+    offset = np.repeat([[data_imsize[0] / 2, data_imsize[1] / 2]],
+                       len(coords), axis=0)
+    return coords + offset
+
+
+def extract_rois(candidates, image, roi_shape=None):
     if roi_shape is None:
         roi_shape = data_imsize
-    rois = np.zeros((len(candidates), 1, roi_shape[0], roi_shape[1]))
-    for idx, (r_orig, c_orig) in enumerate(scale_candidates(candidates, border)):
-        roi_orig = image[int(np.ceil(r_orig - roi_shape[0] / 2)):int(np.ceil(r_orig + roi_shape[0] / 2)),
-                         int(np.ceil(c_orig - roi_shape[1] / 2)):int(np.ceil(c_orig + roi_shape[1] / 2))]
-        rois[idx] = roi_orig
-    return rois
+    rois = []
+    for idx, (r, c) in enumerate(candidates):
+        rh = roi_shape[0] / 2
+        ch = roi_shape[1] / 2
+        # probably introducing a bias here
+        roi_orig = image[int(np.ceil(r - rh)):int(np.ceil(r + rh)),
+                         int(np.ceil(c - ch)):int(np.ceil(c + ch))]
+        if roi_orig.shape == roi_shape:
+            rois.append(roi_orig)
+    return np.stack(rois, axis=0)[:, np.newaxis]
 
 
 def extract_saliencies(candidates, saliency):
     saliencies = np.zeros((len(candidates), 1))
     for idx, (r, c) in enumerate(candidates):
-        saliencies[idx] = saliency[0][0, 0, r, c]
+        saliencies[idx] = saliency[r, c]
     return saliencies
 
 

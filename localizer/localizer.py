@@ -3,8 +3,9 @@
 from os.path import isfile, join, isdir
 from localizer import models, util, keras_helpers, config
 from skimage.filters import gaussian_filter
-
+import localizer.config
 import numpy as np
+from scipy.ndimage.interpolation import zoom
 
 
 class Localizer:
@@ -45,18 +46,21 @@ class Localizer:
         self.convolution_function = keras_helpers.get_convolution_function(
             self.saliency_network, saliency_conv_model)
 
-    def detect_tags(self, image_path, saliency_threshold=0.5):
+    def get_saliency_image(self, image_fname):
         image, image_filtersize, targetsize = util.preprocess_image(
-            image_path, config.filtersize)
-
+                    image_fname, config.filtersize)
         saliency = self.convolution_function(
             image_filtersize.reshape((1, 1, image_filtersize.shape[0],
                                       image_filtersize.shape[1])))
+        saliency = gaussian_filter(saliency[0, 0], sigma=3.)
+        saliency = zoom(saliency, localizer.config.scale_factor)
+        return saliency, image
 
-        saliency[0][0, 0] = gaussian_filter(saliency[0][0, 0], sigma=2.)
-
+    def detect_tags(self, image_path, saliency_threshold=0.5):
+        saliency, image = self.get_saliency_image(image_path)
         candidates = util.get_candidates(saliency, saliency_threshold)
-        rois = util.extract_rois(candidates, image)
+        candidates_img = util.to_image_coordinates(candidates)
+        rois = util.extract_rois(candidates_img, image)
         saliencies = util.extract_saliencies(candidates, saliency)
 
-        return saliencies, candidates, rois
+        return saliencies, candidates_img, rois

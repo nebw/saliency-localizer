@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from localizer import config
-from localizer.util import scale_candidates
 
 
 def plot_sample_images(X, y, y_true = None, num = 24, rowsize = 6, y_bool=False, fig=None, random=False):
@@ -82,7 +81,7 @@ def get_roi_overlay(coordinates, image):
     pltim[:, :, 0] = image
     pltim[:, :, 1] = image
     pltim[:, :, 2] = image
-    for idx, (r, c) in enumerate(scale_candidates(coordinates)):
+    for idx, (r, c) in enumerate(coordinates):
         pltim[int(np.ceil(r - config.data_imsize[0] / 2)):int(np.ceil(r + config.data_imsize[0] / 2)),
               int(np.ceil(c - config.data_imsize[1] / 2)):int(np.ceil(c + config.data_imsize[1] / 2)),
               0] = 1.

@@ -268,6 +268,11 @@ def extract_saliencies(candidates, saliency):
 def get_default_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+    if len(logger.handlers) == 0:
+        handler = logging.StreamHandler()
+        logger.addHandler(handler)
+    else:
+        handler = logger.handlers[0]
     formatter = logging.Formatter('%(asctime)s:%(levelname)s - %(message)s')
-    logger.handlers[0].setFormatter(formatter)
+    handler.setFormatter(formatter)
     return logger

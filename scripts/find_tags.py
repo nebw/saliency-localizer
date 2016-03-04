@@ -1,21 +1,14 @@
 #! /usr/bin/env python
 
 from localizer.localizer import Localizer
-from localizer.util import get_default_logger, to_image_coordinates
-from os.path import join
+from localizer.util import get_default_logger
 from scipy.misc import imread
 import os
 import keras
 from random import shuffle
 import json
 import time
-import hashlib
 import argparse
-
-
-def sha1_of_file(filepath):
-    with open(filepath, 'rb') as f:
-        return hashlib.sha1(f.read()).hexdigest()
 
 
 def main(image_path_file, network_weight_dir, json_file, threshold):
@@ -29,7 +22,7 @@ def main(image_path_file, network_weight_dir, json_file, threshold):
     loc = Localizer()
     loc.load_weights(network_weight_dir)
     image_shape = imread(beesbook_images[0]).shape
-    log.info("Image shape is %", )
+    log.info("Image shape is {}".format(image_shape))
     loc.compile(image_shape=image_shape)
 
     progbar = keras.utils.generic_utils.Progbar(len(beesbook_images))
@@ -37,7 +30,6 @@ def main(image_path_file, network_weight_dir, json_file, threshold):
     try:
         for i, imfname in enumerate(beesbook_images):
             image = {
-                "sha1": sha1_of_file(imfname),
                 "filename": imfname
             }
             saliencies, candidates, _ = loc.detect_tags(imfname, threshold)
@@ -50,6 +42,7 @@ def main(image_path_file, network_weight_dir, json_file, threshold):
             "time": time.time(),
             "threshold": threshold,
             "images": images,
+            "image_shape": image_shape
         }
         json.dump(json_obj, json_file)
 
@@ -70,5 +63,5 @@ if __name__ == "__main__":
     parser.add_argument('images', type=argparse.FileType('r'),
                         help='file with one image filename per line.')
     arg = parser.parse_args()
-    print(arg)
+
     main(arg.images, arg.weight_dir, arg.out, arg.threshold)

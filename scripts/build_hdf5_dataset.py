@@ -32,7 +32,7 @@ def clear_cache():
     return {'rois': [], 'saliencies': []}
 
 
-def main(json_file, hdf5_fname, roi_size, image_dir, threshold, offset):
+def main(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offset):
     tag_positions = json.load(json_file)
     assert not os.path.exists(hdf5_fname), \
         "hdf5 file already exists: {}".format(hdf5_fname)
@@ -51,9 +51,12 @@ def main(json_file, hdf5_fname, roi_size, image_dir, threshold, offset):
                       chunks=(nb_chunks, ))
     h5_pos = 0
     cache = clear_cache()
-    progbar = keras.utils.generic_utils.Progbar(len(tag_positions["images"]))
+    images = tag_positions["images"]
+    if nb_images is not None:
+        images = images[:nb_images]
+    progbar = keras.utils.generic_utils.Progbar(len(images))
     nb_batches = 96
-    for i, im_json in enumerate(tag_positions['images']):
+    for i, im_json in enumerate(images):
         try:
             image = imread(im_json['filename'])
         except OSError as e:
@@ -90,8 +93,10 @@ if __name__ == "__main__":
                         help='threshold only tags above will be selected.')
     parser.add_argument('-i', '--image-dir', type=str,
                         help='images will be used from this directory.')
+    parser.add_argument('--nb-images', type=int,
+                        help='number images to process, usefull for testing.')
     parser.add_argument('input', type=argparse.FileType('r'),
                         help='json file from `find_tags.py`')
     args = parser.parse_args()
-    main(args.input, args.out, args.roi_size, args.image_dir,
+    main(args.input, args.out, args.roi_size, args.image_dir, args.nb_images,
          args.threshold, args.offset)

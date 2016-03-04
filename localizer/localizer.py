@@ -5,7 +5,6 @@ from localizer import models, util, keras_helpers, config
 from skimage.filters import gaussian_filter
 import localizer.config
 import numpy as np
-from scipy.ndimage.interpolation import zoom
 
 
 class Localizer:
@@ -53,14 +52,12 @@ class Localizer:
             image_filtersize.reshape((1, 1, image_filtersize.shape[0],
                                       image_filtersize.shape[1])))
         saliency = gaussian_filter(saliency[0, 0], sigma=3.)
-        saliency = zoom(saliency, localizer.config.scale_factor)
         return saliency, image
 
     def detect_tags(self, image_path, saliency_threshold=0.5):
         saliency, image = self.get_saliency_image(image_path)
         candidates = util.get_candidates(saliency, saliency_threshold)
-        candidates_img = util.to_image_coordinates(candidates)
-        rois = util.extract_rois(candidates_img, image)
         saliencies = util.extract_saliencies(candidates, saliency)
-
+        candidates_img = util.scale_candidates(candidates, saliency)
+        rois = util.extract_rois(candidates_img, image)
         return saliencies, candidates_img, rois

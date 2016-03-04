@@ -13,6 +13,7 @@ from skimage.feature import peak_local_max
 from sklearn.cross_validation import ShuffleSplit
 from keras.utils import generic_utils
 from scipy.misc import imread, imresize
+from scipy.ndimage.interpolation import zoom
 
 from localizer.config import data_imsize, filenames_mmapped, filtersize, \
     scale_factor
@@ -224,23 +225,23 @@ def get_candidates(saliency, saliency_threshold, dist=None):
     return candidates
 
 
-def scale_candidates(candidates, border=0):
-    candidates_arr = np.asarray(candidates)
-    r = candidates_arr[:, 0]
-    c = candidates_arr[:, 1]
-    rc = r + (filtersize[0] - 1) / 2
-    cc = c + (filtersize[1] - 1) / 2
-    assert (np.ceil(rc - filtersize[0] / 2) == r).all()
-    assert (np.ceil(rc + filtersize[0] / 2) == r+filtersize[0]).all()
-    scaled = scale_factor * np.concatenate(
-        [rc[:, np.newaxis], cc[:, np.newaxis]], axis=1)
-    return scaled + border
+def scale_candidates(candidates, saliency):
+    def argmax(x):
+        max_idx = x.reshape(x.shape[0], -1).argmax(axis=1)
+        return np.column_stack(np.unravel_index(max_idx, x[0].shape))
 
+    sf = scale_factor
+    roi_size = 5
+    saliency_rois = extract_rois(candidates, saliency,
+                                 roi_shape=(roi_size, roi_size))
 
-def to_image_coordinates(coords):
-    offset = np.repeat([[data_imsize[0] / 2, data_imsize[1] / 2]],
-                       len(coords), axis=0)
-    return coords + offset
+    zommed_rois = zoom(saliency_rois, (1, 1, sf, sf))
+    maxpos = argmax(zommed_rois)
+    # ignore channel axis
+    maxpos = maxpos[:, 1:]
+    offset = np.repeat([[data_imsize[0] // 2, data_imsize[1] // 2]],
+                       len(candidates), axis=0)
+    return candidates*sf + maxpos - round(sf*roi_size) // 2 + offset
 
 
 def extract_rois(candidates, image, roi_shape=None):

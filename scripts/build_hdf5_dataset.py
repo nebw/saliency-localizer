@@ -9,6 +9,8 @@ import numpy as np
 import json
 import argparse
 import os
+import queue
+import threading
 
 
 def write_cache_to_hdf5(cache, h5, pos):
@@ -18,13 +20,13 @@ def write_cache_to_hdf5(cache, h5, pos):
 
     def write_dataset(dataset, data):
         data = np.concatenate(data)
-        assert len(data) == nb_samples
+        assert len(data) == nb_samples, \
+            "data {} != nb_samples {}".format(len(data), nb_samples)
         dataset.resize(h5_end, axis=0)
         dataset[pos:h5_end] = data[permutation]
 
     write_dataset(h5['tags'], cache['rois'])
     write_dataset(h5['saliencies'], cache['saliencies'])
-    h5.flush()
     return h5_end
 
 
@@ -32,10 +34,48 @@ def clear_cache():
     return {'rois': [], 'saliencies': []}
 
 
+def parallel_load(image_dir, images, nb_worker=8):
+    q = queue.Queue(maxsize=4*nb_worker)
+    todo = queue.Queue()
+    threads = []
+
+    for image in images:
+        todo.put(image)
+
+    def worker():
+        while True:
+            try:
+                im_json = todo.get(block=False)
+                fname = os.path.join(image_dir,
+                                     os.path.basename(im_json['filename']))
+                image = imread(fname)
+            except OSError as e:
+                print(e)
+                q.put(None)
+                continue
+            except queue.Empty:
+                return
+            q.put((im_json, image))
+            todo.task_done()
+
+    for i in range(nb_worker):
+        t = threading.Thread(target=worker)
+        t.start()
+        threads.append(t)
+
+    def generator():
+        for i in range(len(images)):
+            res = q.get()
+            if res is None:
+                continue
+            yield res
+    return generator()
+
+
 def main(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offset):
-    tag_positions = json.load(json_file)
     assert not os.path.exists(hdf5_fname), \
         "hdf5 file already exists: {}".format(hdf5_fname)
+    tag_positions = json.load(json_file)
     h5 = h5py.File(hdf5_fname)
     nb_chunks = 1024
     roi_shape = (roi_size, roi_size)
@@ -55,26 +95,24 @@ def main(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offse
     if nb_images is not None:
         images = images[:nb_images]
     progbar = keras.utils.generic_utils.Progbar(len(images))
-    nb_batches = 96
-    for i, im_json in enumerate(images):
-        try:
-            image = imread(im_json['filename'])
-        except OSError as e:
-            print(e)
-            continue
+    nb_batches = 64
+    for i, (im_json, image) in enumerate(parallel_load(image_dir, images)):
         candidates = np.array(im_json['candidates'])
         saliency = np.array(im_json['saliencies']).reshape((-1))
+        assert len(candidates) == len(saliency)
         selection = saliency >= threshold
-        big_enough_candidates = candidates[selection] + offset
-        rois = extract_rois(big_enough_candidates, image, roi_shape)
+        saliency = saliency[selection]
+        selected_candid = candidates[selection] + offset
+        rois, mask = extract_rois(selected_candid, image, roi_shape)
         cache['rois'].append(rois)
-        cache['saliencies'].append(saliency[selection])
+        cache['saliencies'].append(saliency[mask])
         if len(cache['rois']) > nb_batches:
             h5_pos = write_cache_to_hdf5(cache, h5, h5_pos)
             cache = clear_cache()
         progbar.update(i+1)
 
-    write_cache_to_hdf5(cache, h5, h5_pos)
+    if cache['rois']:
+        write_cache_to_hdf5(cache, h5, h5_pos)
 
 
 if __name__ == "__main__":

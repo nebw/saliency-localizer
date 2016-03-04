@@ -59,5 +59,5 @@ class Localizer:
         candidates = util.get_candidates(saliency, saliency_threshold)
         saliencies = util.extract_saliencies(candidates, saliency)
         candidates_img = util.scale_candidates(candidates, saliency)
-        rois = util.extract_rois(candidates_img, image)
-        return saliencies, candidates_img, rois
+        rois, mask = util.extract_rois(candidates_img, image)
+        return saliencies[mask], candidates_img, rois

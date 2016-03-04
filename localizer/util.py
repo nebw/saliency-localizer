@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import logging
 from os import listdir, makedirs, removedirs
 from os.path import isfile, join, splitext, exists, isdir
@@ -232,9 +230,9 @@ def scale_candidates(candidates, saliency):
 
     sf = scale_factor
     roi_size = 5
-    saliency_rois = extract_rois(candidates, saliency,
-                                 roi_shape=(roi_size, roi_size))
-
+    saliency_rois, selection_mask = extract_rois(
+        candidates, saliency, roi_shape=(roi_size, roi_size))
+    assert (selection_mask == 1).all()
     zommed_rois = zoom(saliency_rois, (1, 1, sf, sf))
     maxpos = argmax(zommed_rois)
     # ignore channel axis
@@ -248,6 +246,7 @@ def extract_rois(candidates, image, roi_shape=None):
     if roi_shape is None:
         roi_shape = data_imsize
     rois = []
+    mask = np.zeros((len(candidates),), dtype=np.bool_)
     for idx, (r, c) in enumerate(candidates):
         rh = roi_shape[0] / 2
         ch = roi_shape[1] / 2
@@ -256,7 +255,9 @@ def extract_rois(candidates, image, roi_shape=None):
                          int(np.ceil(c - ch)):int(np.ceil(c + ch))]
         if roi_orig.shape == roi_shape:
             rois.append(roi_orig)
-    return np.stack(rois, axis=0)[:, np.newaxis]
+            mask[idx] = 1
+    rois = np.stack(rois, axis=0)[:, np.newaxis]
+    return rois, mask
 
 
 def extract_saliencies(candidates, saliency):

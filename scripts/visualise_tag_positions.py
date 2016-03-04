@@ -23,9 +23,9 @@ def plot_mean_image(mean_image):
     plt.colorbar()
 
 
-def main(json_file, output_dir, nb_overlays):
+def main(json_file, output_dir, nb_overlays, nb_images):
     os.makedirs(output_dir, exist_ok=True)
-    images = json.load(json_file)['images']
+    images = json.load(json_file)['images'][:nb_images]
     all_rois = []
     roi_shape = (64, 64)
     saliencies = [s for im in images for s in im['saliencies']]
@@ -65,5 +65,7 @@ if __name__ == "__main__":
                         help='json file with the tag positions.')
     parser.add_argument('--nb-overlays', type=int, default=3,
                         help='number of file to save with roi overlay.')
+    parser.add_argument('--nb-images', type=int, default=100,
+                        help='number of images to look at.')
     arg = parser.parse_args()
-    main(arg.input, arg.output_dir, arg.nb_overlays)
+    main(arg.input, arg.output_dir, arg.nb_overlays, arg.nb_images)

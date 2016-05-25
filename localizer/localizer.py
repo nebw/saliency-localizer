@@ -49,8 +49,8 @@ class Localizer:
         image, image_filtersize, targetsize = util.preprocess_image(
                     image_fname, config.filtersize)
         saliency = self.convolution_function(
-            image_filtersize.reshape((1, 1, image_filtersize.shape[0],
-                                      image_filtersize.shape[1])))
+        image_filtersize.reshape((1, 1, image_filtersize.shape[0],
+                                  image_filtersize.shape[1])))[0]
         saliency = gaussian_filter(saliency[0, 0], sigma=3.)
         return saliency, image
 

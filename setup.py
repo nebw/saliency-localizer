@@ -1,6 +1,6 @@
 from distutils.core import setup
 
-setup(name='saliceny-localizer',
+setup(name='saliency-localizer',
       version='0.0.1',
       description='',
       install_requires=[

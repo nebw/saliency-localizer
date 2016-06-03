@@ -4,6 +4,7 @@ from os.path import isfile, join, splitext, exists, isdir
 import itertools
 import shutil
 from tempfile import NamedTemporaryFile
+import warnings
 
 import h5py
 import numpy as np
@@ -202,7 +203,12 @@ def preprocess_image(image_path, filter_imsize):
     assert(filter_imsize[0] == filter_imsize[1])
     ratio = filter_imsize[0] / data_imsize[0]
 
-    image = imread(image_path)
+    if type(image_path) == str:
+        image = imread(image_path)
+    elif type(image_path) == np.ndarray:
+        image = image_path
+    else:
+        assert(False)
 
     targetsize = np.round(np.array(image.shape) * ratio).astype(int)
     image_filtersize = imresize(image, targetsize, interp='bicubic')
@@ -216,6 +222,8 @@ def preprocess_image(image_path, filter_imsize):
 def get_candidates(saliency, saliency_threshold, dist=None):
     if dist is None:
         dist = filtersize[0] / 2 - 1
+    assert(dist.is_integer())
+    dist = int(dist)
     below_thresh = saliency < saliency_threshold
     im = saliency.copy()
     im[below_thresh] = 0.
@@ -233,7 +241,10 @@ def scale_candidates(candidates, saliency):
     saliency_rois, selection_mask = extract_rois(
         candidates, saliency, roi_shape=(roi_size, roi_size))
     assert (selection_mask == 1).all()
-    zommed_rois = zoom(saliency_rois, (1, 1, sf, sf))
+    # don't print scipy 0.13.0 rounding behaviour change warning
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        zommed_rois = zoom(saliency_rois, (1, 1, sf, sf))
     maxpos = argmax(zommed_rois)
     # ignore channel axis
     maxpos = maxpos[:, 1:]

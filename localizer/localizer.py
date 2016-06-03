@@ -2,7 +2,7 @@
 
 from os.path import isfile, join, isdir
 from localizer import models, util, keras_helpers, config
-from skimage.filters import gaussian_filter
+from skimage.filters import gaussian
 import localizer.config
 import numpy as np
 
@@ -51,7 +51,7 @@ class Localizer:
         saliency = self.convolution_function(
         image_filtersize.reshape((1, 1, image_filtersize.shape[0],
                                   image_filtersize.shape[1])))[0]
-        saliency = gaussian_filter(saliency[0, 0], sigma=3.)
+        saliency = gaussian(saliency[0, 0], sigma=3.)
         return saliency, image
 
     def detect_tags(self, image_path, saliency_threshold=0.5):
@@ -60,4 +60,4 @@ class Localizer:
         saliencies = util.extract_saliencies(candidates, saliency)
         candidates_img = util.scale_candidates(candidates, saliency)
         rois, mask = util.extract_rois(candidates_img, image)
-        return saliencies[mask], candidates_img, rois
+        return saliencies[mask], candidates_img, rois, saliency

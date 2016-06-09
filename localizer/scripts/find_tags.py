@@ -11,7 +11,7 @@ import time
 import argparse
 
 
-def main(image_path_file, network_weight_dir, json_file, threshold):
+def run(image_path_file, network_weight_dir, json_file, threshold):
     log = get_default_logger()
     beesbook_images = [l.rstrip('\n') for l in image_path_file.readlines()]
     for imfname in beesbook_images:
@@ -46,7 +46,8 @@ def main(image_path_file, network_weight_dir, json_file, threshold):
         }
         json.dump(json_obj, json_file)
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser(
         description='Find the tags in many images and saves the position in a'
         ' json file.')
@@ -64,4 +65,8 @@ if __name__ == "__main__":
                         help='file with one image filename per line.')
     arg = parser.parse_args()
 
-    main(arg.images, arg.weight_dir, arg.out, arg.threshold)
+    run(arg.images, arg.weight_dir, arg.out, arg.threshold)
+
+
+if __name__ == "__main__":
+    main()

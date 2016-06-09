@@ -72,7 +72,7 @@ def parallel_load(image_dir, images, nb_worker=8):
     return generator()
 
 
-def main(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offset):
+def run(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offset):
     assert not os.path.exists(hdf5_fname), \
         "hdf5 file already exists: {}".format(hdf5_fname)
     tag_positions = json.load(json_file)
@@ -115,10 +115,9 @@ def main(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offse
         write_cache_to_hdf5(cache, h5, h5_pos)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
-        description='Find the tags in many images and saves the position in a'
-        ' json file.')
+        description='Build a hdf5 dataset with the tags')
     parser.add_argument('-o', '--out', type=str,
                         default='tags.hdf5',
                         help='hdf5 file where the tags will be saved')
@@ -136,5 +135,9 @@ if __name__ == "__main__":
     parser.add_argument('input', type=argparse.FileType('r'),
                         help='json file from `find_tags.py`')
     args = parser.parse_args()
-    main(args.input, args.out, args.roi_size, args.image_dir, args.nb_images,
+    run(args.input, args.out, args.roi_size, args.image_dir, args.nb_images,
          args.threshold, args.offset)
+
+if __name__ == "__main__":
+    main()
+

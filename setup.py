@@ -18,5 +18,5 @@ setup(
             'bb_build_tag_dataset=localizer.scripts.build_tag_dataset:main',
         ],
     },
-    packages=['localizer']
+    packages=['localizer', 'localizer.scripts']
 )

@@ -23,15 +23,12 @@ class Localizer:
         self.saliency_network = models.get_saliency_network(
             train=True, compile=False)
 
-    def load_weights(self, data_dir):
-        if not isdir(data_dir):
-            raise ValueError('data_dir ist not a valid directory')
-        saliency_weight_file = join(data_dir, 'saliency-weights')
-        if isfile(saliency_weight_file):
+    def load_weights(self, fname):
+        if isfile(fname):
             self.logger.info('Restoring saliency network weights...')
-            self.saliency_network.load_weights(saliency_weight_file)
+            self.saliency_network.load_weights(fname)
         else:
-            raise ValueError('invalid weight file')
+            raise ValueError('invalid weight file: {}'.format(fname))
 
     def train_saliency(self):
         self.logger.info('Training saliency network...')

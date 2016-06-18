@@ -11,7 +11,7 @@ import time
 import argparse
 
 
-def run(image_path_file, network_weight_dir, json_file, threshold):
+def run(image_path_file, network_weights, json_file, threshold):
     log = get_default_logger()
     beesbook_images = [l.rstrip('\n') for l in image_path_file.readlines()]
     for imfname in beesbook_images:
@@ -20,7 +20,7 @@ def run(image_path_file, network_weight_dir, json_file, threshold):
     shuffle(beesbook_images)
 
     loc = Localizer()
-    loc.load_weights(network_weight_dir)
+    loc.load_weights(network_weights)
     image_shape = imread(beesbook_images[0]).shape
     log.info("Image shape is {}".format(image_shape))
     loc.compile(image_shape=image_shape)
@@ -54,9 +54,9 @@ def main():
     parser.add_argument('-o', '--out', type=argparse.FileType('w+'),
                         default='tag_positions.json',
                         help='json file with the tag positions')
-    parser.add_argument('-w', '--weight-dir', type=str,
+    parser.add_argument('-w', '--weights', type=str,
                         required=True,
-                        help='directory with the saliency network weights')
+                        help='weights of the saliency network')
     parser.add_argument('-t', '--threshold', type=float,
                         required=True,
                         help='threshold for the saliency network. '
@@ -65,7 +65,7 @@ def main():
                         help='file with one image filename per line.')
     arg = parser.parse_args()
 
-    run(arg.images, arg.weight_dir, arg.out, arg.threshold)
+    run(arg.images, arg.weights, arg.out, arg.threshold)
 
 
 if __name__ == "__main__":

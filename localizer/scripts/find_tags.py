@@ -32,7 +32,8 @@ def run(image_path_file, network_weights, json_file, threshold):
             image = {
                 "filename": imfname
             }
-            saliencies, candidates, _ = loc.detect_tags(imfname, threshold)
+
+            saliencies, candidates, _, _ = loc.detect_tags(imfname, threshold)
             image['candidates'] = candidates.tolist()
             image['saliencies'] = saliencies.tolist()
             images.append(image)

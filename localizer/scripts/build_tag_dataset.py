@@ -34,20 +34,31 @@ def clear_cache():
     return {'rois': [], 'saliencies': []}
 
 
-def parallel_load(image_dir, images, nb_worker=8):
+def parallel_load(image_pathfile, localizer_results, nb_worker=8):
     q = queue.Queue(maxsize=4*nb_worker)
     todo = queue.Queue()
     threads = []
 
-    for image in images:
-        todo.put(image)
+    for image_results in localizer_results:
+        todo.put(image_results)
+
+    def first_part(fname):
+        basename = os.path.basename(fname)
+        name, ext = os.path.splitext(basename)
+        return name.split(".")[0]
+
+    extract_images = {}
+    with open(image_pathfile) as f:
+        for line in f.readlines():
+            fname = line.rstrip("\n")
+            extract_images[first_part(fname)] = fname
 
     def worker():
         while True:
             try:
                 im_json = todo.get(block=False)
-                fname = os.path.join(image_dir,
-                                     os.path.basename(im_json['filename']))
+                localizer_fname = os.path.basename(im_json['filename'])
+                fname = extract_images[first_part(localizer_fname)]
                 image = imread(fname)
             except OSError as e:
                 print(e)
@@ -64,7 +75,7 @@ def parallel_load(image_dir, images, nb_worker=8):
         threads.append(t)
 
     def generator():
-        for i in range(len(images)):
+        for i in range(len(localizer_results)):
             res = q.get()
             if res is None:
                 continue
@@ -72,7 +83,7 @@ def parallel_load(image_dir, images, nb_worker=8):
     return generator()
 
 
-def run(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offset):
+def run(json_file, hdf5_fname, roi_size, image_pathfile, nb_images, threshold, offset):
     assert not os.path.exists(hdf5_fname), \
         "hdf5 file already exists: {}".format(hdf5_fname)
     tag_positions = json.load(json_file)
@@ -96,7 +107,7 @@ def run(json_file, hdf5_fname, roi_size, image_dir, nb_images, threshold, offset
         images = images[:nb_images]
     progbar = keras.utils.generic_utils.Progbar(len(images))
     nb_batches = 64
-    for i, (im_json, image) in enumerate(parallel_load(image_dir, images)):
+    for i, (im_json, image) in enumerate(parallel_load(image_pathfile, images)):
         candidates = np.array(im_json['candidates'])
         saliency = np.array(im_json['saliencies']).reshape((-1))
         assert len(candidates) == len(saliency)
@@ -128,14 +139,14 @@ def main():
                         help="offset that is added to the tag's coordinates")
     parser.add_argument('-t', '--threshold', type=float, default=0,
                         help='threshold only tags above will be selected.')
-    parser.add_argument('-i', '--image-dir', type=str,
-                        help='images will be used from this directory.')
+    parser.add_argument('-i', '--image-pathfile', type=str,
+                        help='extraction will be done on this images.')
     parser.add_argument('--nb-images', type=int,
                         help='number images to process, usefull for testing.')
     parser.add_argument('input', type=argparse.FileType('r'),
                         help='json file from `find_tags.py`')
     args = parser.parse_args()
-    run(args.input, args.out, args.roi_size, args.image_dir, args.nb_images,
+    run(args.input, args.out, args.roi_size, args.image_pathfile, args.nb_images,
          args.threshold, args.offset)
 
 if __name__ == "__main__":

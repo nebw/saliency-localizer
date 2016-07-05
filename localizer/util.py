@@ -279,7 +279,7 @@ def extract_saliencies(candidates, saliency):
 
 
 def get_default_logger():
-    logger = logging.getLogger()
+    logger = logging.getLogger('saliency_logger')
     logger.setLevel(logging.INFO)
     if len(logger.handlers) == 0:
         handler = logging.StreamHandler()

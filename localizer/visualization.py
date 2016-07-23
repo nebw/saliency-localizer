@@ -76,6 +76,7 @@ def plot_saliency_image(image, saliency, filtersize, figsize=(16, 8)):
 
     return fig, axes
 
+
 def get_roi_overlay(coordinates, image):
     pltim = np.zeros((image.shape[0], image.shape[1], 3))
     pltim[:, :, 0] = image
@@ -88,3 +89,33 @@ def get_roi_overlay(coordinates, image):
 
     return pltim
 
+
+def get_circle_overlay(coordinates, image, radius=32, line_width=8):
+    height, width = image.shape
+    overlay = np.stack([image, image, image], axis=-1)
+    import cairocffi as cairo
+    image_surface = cairo.ImageSurface(cairo.FORMAT_A8, image.shape[1], image.shape[0])
+    ctx = cairo.Context(image_surface)
+    for x, y in coordinates:
+        ctx.save()
+        ctx.translate(int(y), int(x))
+        ctx.new_path()
+        ctx.arc(0, 0, radius + line_width / 2., 0, 2*np.pi)
+        ctx.close_path()
+        ctx.set_source_rgba(0, 0, 0, 1)
+        ctx.set_line_width(line_width)
+        ctx.stroke()
+        ctx.restore()
+
+    image_surface.flush()
+    circles = np.ndarray(shape=(height, width),
+                         buffer=image_surface.get_data(),
+                         dtype=np.uint8)
+    circles_mask = (circles == 255)
+    print(circles_mask.shape)
+    print(overlay.shape)
+    overlay[circles_mask, 0] = 1
+    overlay[circles_mask, 1] = 0
+    overlay[circles_mask, 2] = 0
+    image_surface.finish()
+    return overlay

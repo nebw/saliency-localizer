@@ -112,8 +112,6 @@ def get_circle_overlay(coordinates, image, radius=32, line_width=8):
                          buffer=image_surface.get_data(),
                          dtype=np.uint8)
     circles_mask = (circles == 255)
-    print(circles_mask.shape)
-    print(overlay.shape)
     overlay[circles_mask, 0] = 1
     overlay[circles_mask, 1] = 0
     overlay[circles_mask, 2] = 0

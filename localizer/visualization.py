@@ -90,9 +90,16 @@ def get_roi_overlay(coordinates, image):
     return pltim
 
 
-def get_circle_overlay(coordinates, image, radius=32, line_width=8):
-    height, width = image.shape
-    overlay = np.stack([image, image, image], axis=-1)
+def get_circle_overlay(coordinates, image, radius=32, line_width=8,
+                       color=(1., 0, 0)):
+    height, width = image.shape[:2]
+    if image.ndim == 2:
+        overlay = np.stack([image, image, image], axis=-1)
+    elif image.ndim == 3 and image.shape[-1] == 3:
+        overlay = image.copy()
+    else:
+        raise Exception("Did not understand image shape {}.".format(image.shape))
+
     import cairocffi as cairo
     image_surface = cairo.ImageSurface(cairo.FORMAT_A8, image.shape[1], image.shape[0])
     ctx = cairo.Context(image_surface)
@@ -112,8 +119,7 @@ def get_circle_overlay(coordinates, image, radius=32, line_width=8):
                          buffer=image_surface.get_data(),
                          dtype=np.uint8)
     circles_mask = (circles == 255)
-    overlay[circles_mask, 0] = 1
-    overlay[circles_mask, 1] = 0
-    overlay[circles_mask, 2] = 0
+    for i in range(3):
+        overlay[circles_mask, i] = color[i]
     image_surface.finish()
     return overlay

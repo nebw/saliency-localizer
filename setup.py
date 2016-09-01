@@ -12,11 +12,5 @@ setup(
           "seaborn",
           "h5py",
     ],
-    entry_points={
-        'console_scripts': [
-            'bb_find_tags=localizer.scripts.find_tags:main',
-            'bb_build_tag_dataset=localizer.scripts.build_tag_dataset:main',
-        ],
-    },
-    packages=['localizer', 'localizer.scripts']
+    packages=['localizer']
 )
